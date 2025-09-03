@@ -75,7 +75,15 @@ const Dashboard = () => {
 
   const handleCreateProject = () => {
     setShowCreateForm(true);
-    resetForm();
+    setEditingProject(null);
+    setFormData({
+      name: "",
+      teamsUrl: "",
+      prompt: "",
+      wikiUrl: "",
+      wikiTableTitle: "",
+      slackChannel: "",
+    });
   };
 
   const handleEditProject = (project: Project) => {
