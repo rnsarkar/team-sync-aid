@@ -16,6 +16,7 @@ interface Project {
   wikiUrl: string;
   wikiTableTitle: string;
   slackChannel: string;
+  slackMessage: string;
   createdAt: string;
   runs: Run[];
 }
@@ -35,6 +36,7 @@ interface ProjectFormData {
   wikiUrl: string;
   wikiTableTitle: string;
   slackChannel: string;
+  slackMessage: string;
 }
 
 const Dashboard = () => {
@@ -48,6 +50,7 @@ const Dashboard = () => {
     wikiUrl: "",
     wikiTableTitle: "",
     slackChannel: "",
+    slackMessage: "",
   });
   const { toast } = useToast();
 
@@ -64,6 +67,7 @@ const Dashboard = () => {
       wikiUrl: "",
       wikiTableTitle: "",
       slackChannel: "",
+      slackMessage: "",
     });
     setShowCreateForm(false);
     setEditingProject(null);
@@ -83,6 +87,7 @@ const Dashboard = () => {
       wikiUrl: "",
       wikiTableTitle: "",
       slackChannel: "",
+      slackMessage: "",
     });
   };
 
@@ -95,6 +100,7 @@ const Dashboard = () => {
       wikiUrl: project.wikiUrl,
       wikiTableTitle: project.wikiTableTitle,
       slackChannel: project.slackChannel,
+      slackMessage: project.slackMessage || "",
     });
     setShowCreateForm(true);
   };
@@ -324,6 +330,17 @@ const Dashboard = () => {
                   placeholder="#team-updates or @user.name"
                   value={formData.slackChannel}
                   onChange={(e) => handleInputChange("slackChannel", e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="slackMessage">Slack Message Template</Label>
+                <Textarea
+                  id="slackMessage"
+                  placeholder="Meeting summary for {date}: {summary}. Action items: {actionItems}"
+                  rows={3}
+                  value={formData.slackMessage}
+                  onChange={(e) => handleInputChange("slackMessage", e.target.value)}
                 />
               </div>
 
