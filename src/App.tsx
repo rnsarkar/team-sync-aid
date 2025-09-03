@@ -2,7 +2,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import Dashboard from "./pages/Dashboard";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Layout from "./components/Layout";
+import ProjectDashboard from "./pages/ProjectDashboard";
+import CreateProject from "./pages/CreateProject";
+import RunHistory from "./pages/RunHistory";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -11,7 +16,17 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <Dashboard />
+      <BrowserRouter>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<ProjectDashboard />} />
+            <Route path="/create" element={<CreateProject />} />
+            <Route path="/project/:projectId/history" element={<RunHistory />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Layout>
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );
