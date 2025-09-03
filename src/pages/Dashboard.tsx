@@ -5,8 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Play, Settings, Clock, CheckCircle, AlertCircle, Plus, Trash2 } from "lucide-react";
+import { Calendar, Play, Settings, Clock, CheckCircle, AlertCircle, Plus, Trash2, LayoutGrid, List } from "lucide-react";
+import RunProjectModal from "@/components/RunProjectModal";
 
 interface Project {
   id: string;
@@ -43,6 +45,8 @@ const Dashboard = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingProject, setEditingProject] = useState<string | null>(null);
+  const [viewType, setViewType] = useState<"cards" | "list">("cards");
+  const [runModalProject, setRunModalProject] = useState<Project | null>(null);
   const [formData, setFormData] = useState<ProjectFormData>({
     name: "",
     teamsUrl: "",
@@ -165,14 +169,32 @@ const Dashboard = () => {
   };
 
   const handleRunProject = (projectId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (project) {
+      setRunModalProject(project);
+    }
+  };
+
+  const handleRunConfirm = (updatedUrl: string) => {
+    if (!runModalProject) return;
+
+    // Update project with new URL if changed
+    const updatedProjects = projects.map(project => 
+      project.id === runModalProject.id 
+        ? { ...project, teamsUrl: updatedUrl }
+        : project
+    );
+    setProjects(updatedProjects);
+    localStorage.setItem("projects", JSON.stringify(updatedProjects));
+
     const newRun: Run = {
       id: Date.now().toString(),
       date: new Date().toISOString(),
       status: "processing",
     };
 
-    const updatedProjects = projects.map((project) => {
-      if (project.id === projectId) {
+    const projectsWithRun = updatedProjects.map((project) => {
+      if (project.id === runModalProject.id) {
         return {
           ...project,
           runs: [newRun, ...project.runs],
@@ -181,8 +203,9 @@ const Dashboard = () => {
       return project;
     });
 
-    setProjects(updatedProjects);
-    localStorage.setItem("projects", JSON.stringify(updatedProjects));
+    setProjects(projectsWithRun);
+    localStorage.setItem("projects", JSON.stringify(projectsWithRun));
+    setRunModalProject(null);
 
     toast({
       title: "Processing Started",
@@ -202,8 +225,8 @@ const Dashboard = () => {
         ],
       };
 
-      const finalProjects = updatedProjects.map((project) => {
-        if (project.id === projectId) {
+      const finalProjects = projectsWithRun.map((project) => {
+        if (project.id === runModalProject.id) {
           return {
             ...project,
             runs: project.runs.map((run) =>
@@ -372,10 +395,28 @@ const Dashboard = () => {
             Manage your meeting automation projects and view recent runs.
           </p>
         </div>
-        <Button onClick={handleCreateProject} className="bg-gradient-primary">
-          <Plus className="h-4 w-4 mr-2" />
-          Create New Project
-        </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewType === "cards" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewType("cards")}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewType === "list" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewType("list")}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button onClick={handleCreateProject} className="bg-gradient-primary">
+            <Plus className="h-4 w-4 mr-2" />
+            Create New Project
+          </Button>
+        </div>
       </div>
 
       {projects.length === 0 ? (
@@ -393,11 +434,12 @@ const Dashboard = () => {
             </Button>
           </div>
         </div>
-      ) : (
+      ) : viewType === "cards" ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => {
             const latestRun = project.runs[0];
             const completedRuns = project.runs.filter((run) => run.status === "completed").length;
+            const totalRuns = project.runs.length;
 
             return (
               <Card key={project.id} className="shadow-medium hover:shadow-large transition-all duration-200">
@@ -433,7 +475,7 @@ const Dashboard = () => {
 
                     <div className="text-sm">
                       <p className="text-muted-foreground">
-                        <strong>Completed Runs:</strong> {completedRuns}
+                        <strong>Usage:</strong> {totalRuns} runs ({completedRuns} completed)
                       </p>
                     </div>
 
@@ -477,7 +519,117 @@ const Dashboard = () => {
             );
           })}
         </div>
+      ) : (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Project Name</TableHead>
+                <TableHead>Created Date</TableHead>
+                <TableHead>Usage</TableHead>
+                <TableHead>Last Run</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Integrations</TableHead>
+                <TableHead className="w-32">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {projects.map((project) => {
+                const latestRun = project.runs[0];
+                const completedRuns = project.runs.filter((run) => run.status === "completed").length;
+                const totalRuns = project.runs.length;
+                const integrations = [
+                  project.slackChannel && "Slack",
+                  project.wikiUrl && "Wiki"
+                ].filter(Boolean);
+
+                return (
+                  <TableRow key={project.id}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{project.name}</div>
+                        <div className="text-sm text-muted-foreground truncate max-w-xs">
+                          {project.teamsUrl}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {new Date(project.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div>{totalRuns} total</div>
+                        <div className="text-muted-foreground">{completedRuns} completed</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {latestRun ? new Date(latestRun.date).toLocaleDateString() : "Never"}
+                    </TableCell>
+                    <TableCell>
+                      {latestRun ? (
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(latestRun.status)}
+                          <Badge variant="outline" className={getStatusColor(latestRun.status)}>
+                            {latestRun.status}
+                          </Badge>
+                        </div>
+                      ) : (
+                        <Badge variant="outline">Ready</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {integrations.map((integration) => (
+                          <Badge key={integration} variant="secondary" className="text-xs">
+                            {integration}
+                          </Badge>
+                        ))}
+                        {integrations.length === 0 && (
+                          <span className="text-sm text-muted-foreground">None</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          onClick={() => handleRunProject(project.id)}
+                          disabled={latestRun?.status === "processing"}
+                          className="bg-gradient-primary"
+                        >
+                          <Play className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEditProject(project)}
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteProject(project.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
       )}
+
+      <RunProjectModal
+        isOpen={!!runModalProject}
+        onClose={() => setRunModalProject(null)}
+        onRun={handleRunConfirm}
+        project={runModalProject}
+        isProcessing={runModalProject?.runs[0]?.status === "processing"}
+      />
     </div>
   );
 };
