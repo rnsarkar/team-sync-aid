@@ -22,8 +22,24 @@ const Layout = ({ children }: LayoutProps) => {
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <h1 className="text-xl font-semibold text-foreground">
-                  MeetingWise
+                  Meeting Manager
                 </h1>
+              </div>
+              <div className="ml-10 flex space-x-8">
+                {navigation.map((item) => (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    className={cn(
+                      "inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 transition-colors",
+                      location.pathname === item.href
+                        ? "border-primary text-primary"
+                        : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                    )}
+                  >
+                    {item.name}
+                  </Link>
+                ))}
               </div>
             </div>
           </div>
