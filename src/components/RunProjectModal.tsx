@@ -8,7 +8,7 @@ import { Play, X } from "lucide-react";
 interface RunProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onRun: (updatedUrl: string) => void;
+  onRun: (updatedUrl: string, callName: string) => void;
   project: {
     id: string;
     name: string;
@@ -18,19 +18,21 @@ interface RunProjectModalProps {
 }
 
 const RunProjectModal = ({ isOpen, onClose, onRun, project, isProcessing = false }: RunProjectModalProps) => {
+  const [callName, setCallName] = useState("");
   const [meetingUrl, setMeetingUrl] = useState("");
 
   // Update local state when project changes
   useEffect(() => {
     if (project) {
       setMeetingUrl(project.teamsUrl);
+      setCallName("");
     }
   }, [project]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (meetingUrl.trim()) {
-      onRun(meetingUrl.trim());
+    if (meetingUrl.trim() && callName.trim()) {
+      onRun(meetingUrl.trim(), callName.trim());
     }
   };
 
@@ -57,7 +59,22 @@ const RunProjectModal = ({ isOpen, onClose, onRun, project, isProcessing = false
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="meetingUrl">Teams Meeting URL</Label>
+            <Label htmlFor="callName">Call Name *</Label>
+            <Input
+              id="callName"
+              placeholder="e.g., Q4 Planning Meeting, Weekly Standup..."
+              value={callName}
+              onChange={(e) => setCallName(e.target.value)}
+              required
+              disabled={isProcessing}
+            />
+            <p className="text-sm text-muted-foreground">
+              Give this meeting run a descriptive name to identify it later.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="meetingUrl">Teams Meeting URL *</Label>
             <Input
               id="meetingUrl"
               type="url"
@@ -84,7 +101,7 @@ const RunProjectModal = ({ isOpen, onClose, onRun, project, isProcessing = false
             </Button>
             <Button
               type="submit"
-              disabled={!meetingUrl.trim() || isProcessing}
+              disabled={!meetingUrl.trim() || !callName.trim() || isProcessing}
               className="bg-gradient-primary"
             >
               <Play className="h-4 w-4 mr-2" />

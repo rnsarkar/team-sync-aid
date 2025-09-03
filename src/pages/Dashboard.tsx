@@ -26,6 +26,7 @@ interface Project {
 interface Run {
   id: string;
   date: string;
+  callName?: string;
   status: "processing" | "completed" | "failed";
   summary?: string;
   actionItems?: Array<{ item: string; owner: string }>;
@@ -175,7 +176,7 @@ const Dashboard = () => {
     }
   };
 
-  const handleRunConfirm = (updatedUrl: string) => {
+  const handleRunConfirm = (updatedUrl: string, callName: string) => {
     if (!runModalProject) return;
 
     // Update project with new URL if changed
@@ -190,6 +191,7 @@ const Dashboard = () => {
     const newRun: Run = {
       id: Date.now().toString(),
       date: new Date().toISOString(),
+      callName: callName,
       status: "processing",
     };
 
@@ -481,7 +483,9 @@ const Dashboard = () => {
 
                     {latestRun && latestRun.status === "completed" && (
                       <div className="text-sm">
-                        <p className="text-muted-foreground mb-2">Latest Summary:</p>
+                        <p className="text-muted-foreground mb-2">
+                          Latest: {latestRun.callName ? `"${latestRun.callName}"` : "Recent Run"}
+                        </p>
                         <p className="text-foreground line-clamp-3">
                           {latestRun.summary}
                         </p>
@@ -549,7 +553,7 @@ const Dashboard = () => {
                       <div>
                         <div className="font-medium">{project.name}</div>
                         <div className="text-sm text-muted-foreground truncate max-w-xs">
-                          {project.teamsUrl}
+                          {latestRun?.callName || project.teamsUrl}
                         </div>
                       </div>
                     </TableCell>
