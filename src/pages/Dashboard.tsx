@@ -28,6 +28,7 @@ interface Run {
   date: string;
   callName?: string;
   status: "processing" | "completed" | "failed";
+  failureReason?: "recording" | "summary" | "wiki" | "slack";
   summary?: string;
   actionItems?: Array<{ item: string; owner: string }>;
 }
@@ -214,38 +215,102 @@ const Dashboard = () => {
       description: "Your meeting is being processed. This may take a few minutes.",
     });
 
-    // Simulate completion after 3 seconds
+    // Simulate processing with potential failures after 3 seconds
     setTimeout(() => {
-      const completedRun: Run = {
-        ...newRun,
-        status: "completed",
-        summary: "Meeting focused on Q4 planning, budget discussions, and team restructuring. Key decisions made regarding new product launches.",
-        actionItems: [
-          { item: "Finalize Q4 budget proposal", owner: "Sarah Johnson" },
-          { item: "Schedule team restructuring meeting", owner: "Mike Chen" },
-          { item: "Review new product roadmap", owner: "Alex Williams" },
-        ],
-      };
-
-      const finalProjects = projectsWithRun.map((project) => {
-        if (project.id === runModalProject.id) {
-          return {
-            ...project,
-            runs: project.runs.map((run) =>
-              run.id === newRun.id ? completedRun : run
-            ),
-          };
+      // Randomly simulate different outcomes (90% success, 10% failure)
+      const random = Math.random();
+      
+      if (random > 0.9) {
+        // Simulate failure scenarios
+        const failureType = Math.random();
+        let failureReason: Run["failureReason"];
+        let failureMessage = "";
+        
+        if (failureType < 0.25) {
+          failureReason = "recording";
+          failureMessage = "Failed to fetch the meeting recording. Please check the Teams URL and ensure the recording is available.";
+        } else if (failureType < 0.5) {
+          failureReason = "summary";
+          failureMessage = "Failed to generate summary. The AI service is temporarily unavailable.";
+        } else if (failureType < 0.75) {
+          failureReason = "wiki";
+          failureMessage = "Failed to write to the wiki page. Please check your wiki URL and permissions.";
+        } else {
+          failureReason = "slack";
+          failureMessage = "Failed to send Slack notification. Please verify your Slack channel configuration.";
         }
-        return project;
-      });
 
-      setProjects(finalProjects);
-      localStorage.setItem("projects", JSON.stringify(finalProjects));
+        const failedRun: Run = {
+          ...newRun,
+          status: "failed",
+          failureReason: failureReason,
+        };
 
-      toast({
-        title: "Meeting Processed",
-        description: "Summary and action items have been generated successfully.",
-      });
+        const failedProjects = projectsWithRun.map((project) => {
+          if (project.id === runModalProject.id) {
+            return {
+              ...project,
+              runs: project.runs.map((run) =>
+                run.id === newRun.id ? failedRun : run
+              ),
+            };
+          }
+          return project;
+        });
+
+        setProjects(failedProjects);
+        localStorage.setItem("projects", JSON.stringify(failedProjects));
+
+        toast({
+          title: "Processing Failed",
+          description: failureMessage,
+          variant: "destructive",
+        });
+      } else {
+        // Success scenario
+        const completedRun: Run = {
+          ...newRun,
+          status: "completed",
+          summary: "Meeting focused on Q4 planning, budget discussions, and team restructuring. Key decisions made regarding new product launches.",
+          actionItems: [
+            { item: "Finalize Q4 budget proposal", owner: "Sarah Johnson" },
+            { item: "Schedule team restructuring meeting", owner: "Mike Chen" },
+            { item: "Review new product roadmap", owner: "Alex Williams" },
+          ],
+        };
+
+        const finalProjects = projectsWithRun.map((project) => {
+          if (project.id === runModalProject.id) {
+            return {
+              ...project,
+              runs: project.runs.map((run) =>
+                run.id === newRun.id ? completedRun : run
+              ),
+            };
+          }
+          return project;
+        });
+
+        setProjects(finalProjects);
+        localStorage.setItem("projects", JSON.stringify(finalProjects));
+
+        // Success with confetti animation
+        const confettiElement = document.createElement('div');
+        confettiElement.className = 'confetti-container';
+        confettiElement.innerHTML = Array.from({length: 50}, (_, i) => 
+          `<div class="confetti-piece" style="--delay: ${i * 0.1}s; --x: ${Math.random() * 100}vw;"></div>`
+        ).join('');
+        document.body.appendChild(confettiElement);
+
+        setTimeout(() => {
+          document.body.removeChild(confettiElement);
+        }, 3000);
+
+        toast({
+          title: "🎉 Meeting Processed Successfully!",
+          description: `"${callName}" has been analyzed and all integrations updated.`,
+        });
+      }
     }, 3000);
   };
 
@@ -533,7 +598,6 @@ const Dashboard = () => {
                 <TableHead>Usage</TableHead>
                 <TableHead>Last Run</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Integrations</TableHead>
                 <TableHead className="w-32">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -542,10 +606,6 @@ const Dashboard = () => {
                 const latestRun = project.runs[0];
                 const completedRuns = project.runs.filter((run) => run.status === "completed").length;
                 const totalRuns = project.runs.length;
-                const integrations = [
-                  project.slackChannel && "Slack",
-                  project.wikiUrl && "Wiki"
-                ].filter(Boolean);
 
                 return (
                   <TableRow key={project.id}>
@@ -580,18 +640,6 @@ const Dashboard = () => {
                       ) : (
                         <Badge variant="outline">Ready</Badge>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {integrations.map((integration) => (
-                          <Badge key={integration} variant="secondary" className="text-xs">
-                            {integration}
-                          </Badge>
-                        ))}
-                        {integrations.length === 0 && (
-                          <span className="text-sm text-muted-foreground">None</span>
-                        )}
-                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
